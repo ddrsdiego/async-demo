@@ -1,14 +1,29 @@
-namespace AsyncDemo
-{
-    using System.Threading.Tasks;
-    using Microsoft.Extensions.Hosting;
+using AsyncDemo.DbContexts;
+using AsyncDemo.Services;
+using Microsoft.EntityFrameworkCore;
 
-    public static class Program
-    {
-        public static async Task Main(string[] args) => await CreateHostBuilder(args).Build().RunAsync();
+var builder = WebApplication.CreateBuilder(args);
 
-        public static IHostBuilder CreateHostBuilder(string[] args) =>
-            Host.CreateDefaultBuilder(args)
-                .ConfigureWebHostDefaults(webBuilder => { webBuilder.UseStartup<Startup>(); });
-    }
-}
+// Add services to the container.
+
+// Throttle the thread pool (set available threads to amount of processors)
+ThreadPool.SetMaxThreads(Environment.ProcessorCount, Environment.ProcessorCount);
+
+builder.Services.AddControllers();
+
+// register the DbContext on the container 
+builder.Services.AddDbContext<BookContext>(options =>
+    options.UseSqlite(
+        builder.Configuration["ConnectionStrings:BooksDBConnectionString"]));
+
+builder.Services.AddScoped<IBooksRepository, BooksRepository>();
+
+var app = builder.Build();
+
+// Configure the HTTP request pipeline.
+
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.Run();
